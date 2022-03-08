@@ -91,34 +91,11 @@ md"""
 ##### Compute specific growth rate
 """
 
-# ╔═╡ 34682c11-8139-4e7e-8a8b-bcfafa8ce628
-begin
-
-	# default value for μ -
-	μ = 0.0 # units: 1/s
-	
-	with_terminal() do
-		println("Specific growth rate μ = $(μ) s⁻¹")
-	end
-end
-
 # ╔═╡ a7df4d41-1c0f-422e-8f21-c84b812ac3cd
 md"""
 ##### Concentration conversion factor
 Assume HL60 cells are spherical. Use [bionumbers]() to formulate a concentration conversion factor between M and $\mu$mol/gDW concentration units.
 """
-
-# ╔═╡ e891e546-f275-4cc8-beb4-0447094f01b2
-begin
-
-	# Need: convert mol/L to μmol/gDW
-	CF = 0.0
-	
-
-	with_terminal() do
-		println("Conversion factor (M -> μmol/gDW) CF = $(CF)")
-	end
-end
 
 # ╔═╡ b552fa38-cdc2-4f46-917f-4cac78694c86
 md"""
@@ -134,21 +111,6 @@ md"""
 md"""
 ### C4: Include both dilution and metabolite data in bounds
 """
-
-# ╔═╡ fca0ae0f-607a-4144-9b30-e237df7f43af
-begin
-	
-	# background color plots -
-    background_color_outside = RGB(1.0, 1.0, 1.0)
-    background_color = RGB(0.99, 0.98, 0.96)
-    CB_BLUE = RGB(68 / 255, 119 / 255, 170 / 255)
-    CB_LBLUE = RGB(102 / 255, 204 / 255, 238 / 255)
-    CB_GRAY = RGB(187 / 255, 187 / 255, 187 / 255)
-    CB_RED = RGB(238 / 255, 102 / 255, 119 / 255)
-
-	# show -
-	nothing
-end
 
 # ╔═╡ 58a35e5c-2f3c-4818-a290-7b8ae509320f
 function ingredients(path::String)
@@ -303,26 +265,6 @@ begin
     metabolite_table = CSV.read(path_to_data_file, DataFrame)
 end
 
-# ╔═╡ 07ca2450-8a84-4e71-adcf-91b12a1544ee
-begin
-
-	# grab data from the [Met]/Km col -
-	col_key = Symbol("[Met]/Km")
-	length = 1000
-	saturation_data_set = sort(metabolite_table[!,col_key])[1:length]
-	number_of_bins = round(Int64,0.25*length)
-	
-	# make a histogram plot -
-	stephist(saturation_data_set, bins = number_of_bins, normed = :true,
-                background_color = background_color, background_color_outside = background_color_outside,
-                foreground_color_minor_grid = RGB(1.0, 1.0, 1.0),
-                lw = 2, c = CB_RED, foreground_color_legend = nothing, label = "N = $(length)")
-
-	# label the axis -
-	xlabel!("Metabolite saturation xᵢ/Kₘ (dimensionless)",fontsize=18)
-	ylabel!("Instance count", fontsize=18)
-end
-
 # ╔═╡ 85e1ac31-90cf-48da-b4d7-b6c009328084
 begin
 
@@ -333,6 +275,76 @@ begin
 	# use the filter command on the df to check: do we have our ec numbers?
 	filter_col_key = Symbol("EC Number")
 	df = filter(filter_col_key=>x->in(x,ec_number_array), metabolite_table)
+end
+
+# ╔═╡ 2aae7c9e-1139-4d4e-a33a-8af1dad048b4
+begin
+	# setup new flux bounds array -
+	flux_bounds_array2 = zeros(ℛ,2)
+	flux_bounds_array2[:,2] .= 100.0 # default value is 100 for flux units: μmol/gDW-s
+	flux_bounds_array2[1,2] = 203.0*E[1]*1.25
+	flux_bounds_array2[2,2] = 34.5*E[2]*3
+	flux_bounds_array2[3,2] = 249.0*E[3]*4.5
+	flux_bounds_array2[4,2] = 88.1*E[4]*6
+	flux_bounds_array2[5,2] = 13.7*E[5]*8.5
+	flux_bounds_array2[6,2] = 13.7*E[6]*0.3
+
+	# O2 uptake -
+	flux_bounds_array2[15,1] = 0.25
+
+	# compute the new flux -
+	result_case_2 = lib.flux(S,flux_bounds_array2,species_bounds_array,c_vector);
+
+	# show -
+	nothing
+end
+
+# ╔═╡ 552d733a-25a7-4e35-88c5-c91efe6dac07
+let
+
+	# get new flux values from the result -
+	calculated_flux_array2 = result_case_2.calculated_flux_array
+
+	# build new flux table -
+	flux_table2 = Array{Any,2}(undef,ℛ,4)
+
+	# populate -
+	for i ∈ 1:ℛ
+		flux_table2[i,1] = i
+		flux_table2[i,2] = rna[i]
+		flux_table2[i,3] = calculated_flux_array2[i]*(1) # units: μmol/gDW-hr
+		flux_table2[i,4] = expanded_reaction_array[i]
+	end
+
+	# setup header -
+	header_row = (["i","name","flux","reaction"],["","","μmol/gDW-s",""])
+	
+	with_terminal() do
+		pretty_table(flux_table2; header=header_row, alignment=:l)
+	end
+end
+
+# ╔═╡ 34682c11-8139-4e7e-8a8b-bcfafa8ce628
+begin
+
+	# default value for μ -
+	μ = 0.0 # units: 1/s
+	
+	with_terminal() do
+		println("Specific growth rate μ = $(μ) s⁻¹")
+	end
+end
+
+# ╔═╡ e891e546-f275-4cc8-beb4-0447094f01b2
+begin
+
+	# Need: convert mol/L to μmol/gDW
+	CF = 0.0
+	
+
+	with_terminal() do
+		println("Conversion factor (M -> μmol/gDW) CF = $(CF)")
+	end
 end
 
 # ╔═╡ c1878272-dd06-46b3-84f3-6d05c459688a
@@ -400,53 +412,6 @@ let
 		
 		# make the table -
 		pretty_table(state_array; header=header_row)
-	end
-end
-
-# ╔═╡ 2aae7c9e-1139-4d4e-a33a-8af1dad048b4
-begin
-	# setup new flux bounds array -
-	flux_bounds_array2 = zeros(ℛ,2)
-	flux_bounds_array2[:,2] .= 100.0 # default value is 100 for flux units: μmol/gDW-s
-	flux_bounds_array2[1,2] = 203.0*E[1]*1.25
-	flux_bounds_array2[2,2] = 34.5*E[2]*3
-	flux_bounds_array2[3,2] = 249.0*E[3]*4.5
-	flux_bounds_array2[4,2] = 88.1*E[4]*6
-	flux_bounds_array2[5,2] = 13.7*E[5]*8.5
-	flux_bounds_array2[6,2] = 13.7*E[6]*0.3
-
-	# O2 uptake -
-	flux_bounds_array2[15,1] = 0.25
-
-	# compute the new flux -
-	result_case_2 = lib.flux(S,flux_bounds_array2,species_bounds_array,c_vector);
-
-	# show -
-	nothing
-end
-
-# ╔═╡ 552d733a-25a7-4e35-88c5-c91efe6dac07
-let
-
-	# get new flux values from the result -
-	calculated_flux_array2 = result_case_2.calculated_flux_array
-
-	# build new flux table -
-	flux_table2 = Array{Any,2}(undef,ℛ,4)
-
-	# populate -
-	for i ∈ 1:ℛ
-		flux_table2[i,1] = i
-		flux_table2[i,2] = rna[i]
-		flux_table2[i,3] = calculated_flux_array2[i]*(1) # units: μmol/gDW-hr
-		flux_table2[i,4] = expanded_reaction_array[i]
-	end
-
-	# setup header -
-	header_row = (["i","name","flux","reaction"],["","","μmol/gDW-s",""])
-	
-	with_terminal() do
-		pretty_table(flux_table2; header=header_row, alignment=:l)
 	end
 end
 
@@ -535,6 +500,41 @@ let
 		pretty_table(state_table; header=header_row, alignment=:l)
 	end
 	
+end
+
+# ╔═╡ fca0ae0f-607a-4144-9b30-e237df7f43af
+begin
+	
+	# background color plots -
+    background_color_outside = RGB(1.0, 1.0, 1.0)
+    background_color = RGB(0.99, 0.98, 0.96)
+    CB_BLUE = RGB(68 / 255, 119 / 255, 170 / 255)
+    CB_LBLUE = RGB(102 / 255, 204 / 255, 238 / 255)
+    CB_GRAY = RGB(187 / 255, 187 / 255, 187 / 255)
+    CB_RED = RGB(238 / 255, 102 / 255, 119 / 255)
+
+	# show -
+	nothing
+end
+
+# ╔═╡ 07ca2450-8a84-4e71-adcf-91b12a1544ee
+begin
+
+	# grab data from the [Met]/Km col -
+	col_key = Symbol("[Met]/Km")
+	length = 1000
+	saturation_data_set = sort(metabolite_table[!,col_key])[1:length]
+	number_of_bins = round(Int64,0.25*length)
+	
+	# make a histogram plot -
+	stephist(saturation_data_set, bins = number_of_bins, normed = :true,
+                background_color = background_color, background_color_outside = background_color_outside,
+                foreground_color_minor_grid = RGB(1.0, 1.0, 1.0),
+                lw = 2, c = CB_RED, foreground_color_legend = nothing, label = "N = $(length)")
+
+	# label the axis -
+	xlabel!("Metabolite saturation xᵢ/Kₘ (dimensionless)",fontsize=18)
+	ylabel!("Instance count", fontsize=18)
 end
 
 # ╔═╡ f472e85e-8f51-11ec-25e8-e94287a542b6
