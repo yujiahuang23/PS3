@@ -4,6 +4,11 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ c25baea8-2cd6-4b18-889b-5f2ce6edfb78
+md"""
+## PS3 by Yujia Huang  yh945
+"""
+
 # ╔═╡ 2babb04c-7f14-4c30-a4f9-348ed31d4fbf
 md"""
 ### Flux Balance Analysis of the Urea Cycle
@@ -60,6 +65,11 @@ We need to calculate the substrate/$K_{m}$ ratios to calculate the rates. To do 
 md"""
 ##### Are any of the enzymes in our system in the Park dataset?
 To answer this question, let's take advantage of the features of [DataFrames](https://dataframes.juliadata.org/stable/) and do in-memory filtering of the dataset using the [filter](https://dataframes.juliadata.org/stable/lib/functions/#Base.filter) command. Let's filter on the [enzyme commission number (ec number)](https://en.wikipedia.org/wiki/Enzyme_Commission_number).
+"""
+
+# ╔═╡ 45e5f440-4921-4334-92d0-c5d6e30c50a1
+md"""
+###### From the formula of $v_{i}$ above, we need to find every $S_{j}$/$K_{j}$ for each substrate, so using the data above. For the missing ones we just estimate them to be 1. 
 """
 
 # ╔═╡ 70239f9d-1ea8-4ad2-92a3-126cd99de4f0
@@ -200,7 +210,7 @@ begin
 	flux_bounds_array[6,2] = 13.7*E[6]
 
 	# O2 uptake -
-	 flux_bounds_array[15,1] = 0.25
+	flux_bounds_array[15,1] = 0.25
 
 	# setup species bounds array -
 	species_bounds_array = zeros(ℳ,2)
@@ -279,24 +289,47 @@ end
 
 # ╔═╡ 2aae7c9e-1139-4d4e-a33a-8af1dad048b4
 begin
-	# setup new flux bounds array -
+	# calculate the substrate/ ratios
+	S_K_array = ones(6)
+	S_K_array[1] = (11.9*96.7*1)/((1+11.9)*(1+96.7)*(1+1))
+    S_K_array[2] = 0.5
+	S_K_array[3] = (0.165*1)/((1+1)*(1+0.165)) 
+	S_K_array[4] = (0.1*1)/((1+0.1)*(1+1)) # estimate the ornithine in Homo sapiens to be 0.1
+	S_K_array[5] = 73.1/(74.1*2*2*2)
+	S_K_array[6] = 1/(2*2*2*2)
+	
+	# setup new flux bounds array 	
 	flux_bounds_array2 = zeros(ℛ,2)
+	
 	flux_bounds_array2[:,2] .= 100.0 # default value is 100 for flux units: μmol/gDW-s
-	flux_bounds_array2[1,2] = 203.0*E[1]*1.25
-	flux_bounds_array2[2,2] = 34.5*E[2]*3
-	flux_bounds_array2[3,2] = 249.0*E[3]*4.5
-	flux_bounds_array2[4,2] = 88.1*E[4]*6
-	flux_bounds_array2[5,2] = 13.7*E[5]*8.5
-	flux_bounds_array2[6,2] = 13.7*E[6]*0.3
+	flux_bounds_array2[1,2] = 203.0*E[1]*S_K_array[1]
+	flux_bounds_array2[2,2] = 34.5*E[2]*S_K_array[2]
+	flux_bounds_array2[3,2] = 249.0*E[3]*S_K_array[3]
+	flux_bounds_array2[4,2] = 88.1*E[4]*S_K_array[4]
+	flux_bounds_array2[5,2] = 13.7*E[5]*S_K_array[5]
+	flux_bounds_array2[6,2] = 13.7*E[6]*S_K_array[6]
 
 	# O2 uptake -
-	flux_bounds_array2[15,1] = 0.25
+    flux_bounds_array2[15,1] = 0.0025 # modified by oxygen level estimate
 
 	# compute the new flux -
 	result_case_2 = lib.flux(S,flux_bounds_array2,species_bounds_array,c_vector);
 
 	# show -
 	nothing
+end
+
+# ╔═╡ d9debc3e-b28d-4214-8953-75e5dc89edb3
+# check:
+with_terminal() do
+	ef = result_case_2.exit_flag
+	sf = result_case_2.status_flag
+
+	if (ef == 0.0 && sf == 5.0)
+		println("Case 2: Optimal solution found. exit flag = $(ef) and status flag = $(sf)")
+	else
+		println("Case 2: Ooops! Check your problem setup. exit flag = $(ef) and status flag = $(sf)")
+	end
 end
 
 # ╔═╡ 552d733a-25a7-4e35-88c5-c91efe6dac07
@@ -1867,6 +1900,7 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
+# ╟─c25baea8-2cd6-4b18-889b-5f2ce6edfb78
 # ╟─2babb04c-7f14-4c30-a4f9-348ed31d4fbf
 # ╠═0fe1a22d-a333-4834-88be-92180c39bbb3
 # ╟─54d23ccb-211c-4716-a80c-2c087198232d
@@ -1879,10 +1913,12 @@ version = "0.9.1+5"
 # ╠═70d11054-4d8a-4dcc-a8cd-1f762c2dd9b8
 # ╟─12eef416-b3ab-4f03-8ac0-a9783dcca9bd
 # ╠═880ce921-308b-4e3c-8bd9-fb9d07d18bd3
-# ╟─07ca2450-8a84-4e71-adcf-91b12a1544ee
+# ╠═07ca2450-8a84-4e71-adcf-91b12a1544ee
 # ╟─e2917845-d956-45f0-a379-ea826caf7d88
 # ╠═85e1ac31-90cf-48da-b4d7-b6c009328084
+# ╟─45e5f440-4921-4334-92d0-c5d6e30c50a1
 # ╠═2aae7c9e-1139-4d4e-a33a-8af1dad048b4
+# ╠═d9debc3e-b28d-4214-8953-75e5dc89edb3
 # ╠═552d733a-25a7-4e35-88c5-c91efe6dac07
 # ╟─70239f9d-1ea8-4ad2-92a3-126cd99de4f0
 # ╟─cb7d76b8-85f9-4886-a4f3-3f9fb82e42dc
